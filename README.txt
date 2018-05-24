@@ -7,7 +7,25 @@ kylin Mondrian
 3.由于kylin的语法的UPPER函数只支持对表字段使用，而不支持对值使用，但mondrian会对值也加上upper函数，
   所以对kylin的方言做了一些改动，适配kylin的语法。
 3.Mondrian初始只支持inner join，如果kylin的模型配置了left join，查询则会失败，参考开源项目mondrian-join-support做了修改。
-
+  需要在cube节点下增加关联关系描述 如下:
+          <Joins>
+              <Join joinType='left' >
+                  <JoinTable tableName='fhir_claim'>
+                      <Column name='ENCOUNTER_ID' />
+                  </JoinTable>
+                  <JoinTable tableName='fhir_condition'>
+                      <Column name='ENCOUNTER_ID' />
+                  </JoinTable>
+              </Join>
+              <Join joinType='inner' >
+                  <JoinTable tableName='fhir_claim'>
+                      <Column name='CLAIM_DATE' />
+                  </JoinTable>
+                  <JoinTable tableName='fhir_date_dimension_v2'>
+                      <Column name='DATE_KEY' />
+                  </JoinTable>
+              </Join>
+          </Joins>
 
 
 This is a source, binary or data distribution of Mondrian,
