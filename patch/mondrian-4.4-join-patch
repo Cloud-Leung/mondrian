@@ -118,9 +118,9 @@ diff -uprN "\344\270\213\350\275\275/mondrian-4.4/src/main/java/mondrian/rolap/s
          if (dialect.allowsJoinOn() && from.size() > 1) {
              if (joinCount <= 0) {
                  throw new AssertionError();
-diff -uprN "\344\270\213\350\275\275/mondrian-4.4/src/main/xom/mondrian/olap/MondrianSchema.xml" src/main/xom/mondrian/olap/MondrianSchema.xml
+diff -uprN "\344\270\213\350\275\275/mondrian-4.4/src/main/xom/mondrian/olap/MondrianSchema.xml" mondrian/src/main/xom/mondrian/olap/MondrianSchema.xml
 --- "\344\270\213\350\275\275/mondrian-4.4/src/main/xom/mondrian/olap/MondrianSchema.xml"	2016-05-31 23:10:19.000000000 +0800
-+++ src/main/xom/mondrian/olap/MondrianSchema.xml	2016-11-25 11:13:11.685528828 +0800
++++ mondrian/src/main/xom/mondrian/olap/MondrianSchema.xml	2016-11-25 11:13:11.685528828 +0800
 @@ -927,7 +927,8 @@ version 3.x schemas.</p>
                      MeasureGroups.class,
                      Dimensions.class,

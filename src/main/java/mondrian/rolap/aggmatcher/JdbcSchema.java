@@ -10,33 +10,38 @@
 */
 package mondrian.rolap.aggmatcher;
 
-import mondrian.olap.*;
+import mondrian.olap.MondrianDef;
+import mondrian.olap.Util;
 import mondrian.resource.MondrianResource;
-import mondrian.rolap.*;
-import mondrian.spi.*;
-import mondrian.util.*;
-
+import mondrian.rolap.RolapAggregator;
+import mondrian.rolap.RolapLevel;
+import mondrian.rolap.RolapSchema;
+import mondrian.rolap.RolapStar;
+import mondrian.spi.Dialect;
+import mondrian.util.Pair;
 import org.apache.log4j.Logger;
-
 import org.olap4j.impl.Olap4jUtil;
 
+import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.ref.SoftReference;
 import java.sql.*;
-import java.sql.Connection;
 import java.util.*;
-import javax.sql.DataSource;
 
 /**
+ * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ * getDatatype 将bigint类型改为Dialect.Datatype.Numeric
+ * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ *
  * Metadata gleaned from JDBC about the tables and columns in the star schema.
  * This class is used to scrape a database and store information about its
  * tables and columns.
- *
+ * <p>
  * <p>The structure of this information is as follows: A database has tables. A
  * table has columns. A column has one or more usages.  A usage might be a
  * column being used as a foreign key or as part of a measure.
- *
+ * <p>
  * <p>Tables are created when calling code requests the set of available
  * tables. This calls <code>getTables()</code>, causing all tables to be loaded.
  * Columns are loaded on demand. Each table's columns are not loaded until
@@ -50,7 +55,7 @@ import javax.sql.DataSource;
  */
 public class JdbcSchema {
     private static final Logger LOGGER =
-        Logger.getLogger(JdbcSchema.class);
+            Logger.getLogger(JdbcSchema.class);
 
     private static final MondrianResource mres = MondrianResource.instance();
 
@@ -67,7 +72,7 @@ public class JdbcSchema {
 
     private static final
     Map<Pair<Factory, DataSource>, SoftReference<JdbcSchema>> dbMap =
-        new HashMap<Pair<Factory, DataSource>, SoftReference<JdbcSchema>>();
+            new HashMap<Pair<Factory, DataSource>, SoftReference<JdbcSchema>>();
 
     /**
      * How often between sweeping through the dbMap looking for nulls.
@@ -76,19 +81,16 @@ public class JdbcSchema {
     private static int sweepDBCount = 0;
 
 
-
     /**
      * Creates or retrieves an instance of the JdbcSchema for the given
      * DataSource.
      *
-     *
      * @param dataSource DataSource
-     * @param factory Factory for creating a JdbcSchema
+     * @param factory    Factory for creating a JdbcSchema
      * @return instance of the JdbcSchema for the given DataSource
      */
     public static synchronized JdbcSchema makeDB(
-        DataSource dataSource, Factory factory)
-    {
+            DataSource dataSource, Factory factory) {
         JdbcSchema db = null;
         SoftReference<JdbcSchema> ref = dbMap.get(dataSource);
         if (ref != null) {
@@ -97,8 +99,8 @@ public class JdbcSchema {
         if (db == null) {
             db = factory.loadDatabase(dataSource);
             dbMap.put(
-                new Pair<Factory, DataSource>(factory, dataSource),
-                new SoftReference<JdbcSchema>(db));
+                    new Pair<Factory, DataSource>(factory, dataSource),
+                    new SoftReference<JdbcSchema>(db));
         }
 
         sweepDB();
@@ -153,19 +155,19 @@ public class JdbcSchema {
     //
     // Types of column usages.
     //
-    public static final int UNKNOWN_COLUMN_USAGE         = 0x0001;
-    public static final int FOREIGN_KEY_COLUMN_USAGE     = 0x0002;
-    public static final int MEASURE_COLUMN_USAGE         = 0x0004;
-    public static final int LEVEL_COLUMN_USAGE           = 0x0008;
-    public static final int FACT_COUNT_COLUMN_USAGE      = 0x0010;
-    public static final int IGNORE_COLUMN_USAGE          = 0x0020;
+    public static final int UNKNOWN_COLUMN_USAGE = 0x0001;
+    public static final int FOREIGN_KEY_COLUMN_USAGE = 0x0002;
+    public static final int MEASURE_COLUMN_USAGE = 0x0004;
+    public static final int LEVEL_COLUMN_USAGE = 0x0008;
+    public static final int FACT_COUNT_COLUMN_USAGE = 0x0010;
+    public static final int IGNORE_COLUMN_USAGE = 0x0020;
 
-    public static final String UNKNOWN_COLUMN_NAME         = "UNKNOWN";
-    public static final String FOREIGN_KEY_COLUMN_NAME     = "FOREIGN_KEY";
-    public static final String MEASURE_COLUMN_NAME         = "MEASURE";
-    public static final String LEVEL_COLUMN_NAME           = "LEVEL";
-    public static final String FACT_COUNT_COLUMN_NAME      = "FACT_COUNT";
-    public static final String IGNORE_COLUMN_NAME          = "IGNORE";
+    public static final String UNKNOWN_COLUMN_NAME = "UNKNOWN";
+    public static final String FOREIGN_KEY_COLUMN_NAME = "FOREIGN_KEY";
+    public static final String MEASURE_COLUMN_NAME = "MEASURE";
+    public static final String LEVEL_COLUMN_NAME = "LEVEL";
+    public static final String FACT_COUNT_COLUMN_NAME = "FACT_COUNT";
+    public static final String IGNORE_COLUMN_NAME = "IGNORE";
 
     /**
      * Enumeration of ways that an aggregate table can use a column.
@@ -211,6 +213,11 @@ public class JdbcSchema {
     }
 
     /**
+     *
+     * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     * getDatatype 将bigint类型改为Dialect.Datatype.Numeric
+     * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+     *
      * Converts a {@link java.sql.Types} value to a
      * {@link mondrian.spi.Dialect.Datatype}.
      *
@@ -219,29 +226,29 @@ public class JdbcSchema {
      */
     public static Dialect.Datatype getDatatype(int javaType) {
         switch (javaType) {
-        case Types.TINYINT:
-        case Types.SMALLINT:
-        case Types.INTEGER:
-        case Types.BIGINT:
-            return Dialect.Datatype.Integer;
-        case Types.FLOAT:
-        case Types.REAL:
-        case Types.DOUBLE:
-        case Types.NUMERIC:
-        case Types.DECIMAL:
-            return Dialect.Datatype.Numeric;
-        case Types.BOOLEAN:
-            return Dialect.Datatype.Boolean;
-        case Types.DATE:
-            return Dialect.Datatype.Date;
-        case Types.TIME:
-            return Dialect.Datatype.Time;
-        case Types.TIMESTAMP:
-            return Dialect.Datatype.Timestamp;
-        case Types.CHAR:
-        case Types.VARCHAR:
-        default:
-            return Dialect.Datatype.String;
+            case Types.TINYINT:
+            case Types.SMALLINT:
+            case Types.INTEGER:
+                return Dialect.Datatype.Integer;
+            case Types.FLOAT:
+            case Types.REAL:
+            case Types.DOUBLE:
+            case Types.NUMERIC:
+            case Types.DECIMAL:
+            case Types.BIGINT:
+                return Dialect.Datatype.Numeric;
+            case Types.BOOLEAN:
+                return Dialect.Datatype.Boolean;
+            case Types.DATE:
+                return Dialect.Datatype.Date;
+            case Types.TIME:
+                return Dialect.Datatype.Time;
+            case Types.TIMESTAMP:
+                return Dialect.Datatype.Timestamp;
+            case Types.CHAR:
+            case Types.VARCHAR:
+            default:
+                return Dialect.Datatype.String;
         }
     }
 
@@ -250,12 +257,12 @@ public class JdbcSchema {
      */
     public static boolean isText(int javaType) {
         switch (javaType) {
-        case Types.CHAR:
-        case Types.VARCHAR:
-        case Types.LONGVARCHAR:
-            return true;
-        default:
-            return false;
+            case Types.CHAR:
+            case Types.VARCHAR:
+            case Types.LONGVARCHAR:
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -400,26 +407,38 @@ public class JdbcSchema {
                 }
             }
 
-            /** This is the name of the column. */
+            /**
+             * This is the name of the column.
+             */
             private final String name;
 
-            /** This is the java.sql.Type enum of the column in the database. */
+            /**
+             * This is the java.sql.Type enum of the column in the database.
+             */
             private int type;
             /**
              * This is the java.sql.Type name of the column in the database.
              */
             private String typeName;
 
-            /** This is the size of the column in the database. */
+            /**
+             * This is the size of the column in the database.
+             */
             private int columnSize;
 
-            /** The number of fractional digits. */
+            /**
+             * The number of fractional digits.
+             */
             private int decimalDigits;
 
-            /** Radix (typically either 10 or 2). */
+            /**
+             * Radix (typically either 10 or 2).
+             */
             private int numPrecRadix;
 
-            /** For char types the maximum number of bytes in the column. */
+            /**
+             * For char types the maximum number of bytes in the column.
+             */
             private int charOctetLength;
 
             /**
@@ -435,14 +454,14 @@ public class JdbcSchema {
              * This contains the enums of all of the column's usages.
              */
             private final Set<UsageType> usageTypes =
-                Olap4jUtil.enumSetNoneOf(UsageType.class);
+                    Olap4jUtil.enumSetNoneOf(UsageType.class);
 
             public Column(final String name) {
                 this.name = name;
                 this.column =
-                    new MondrianDef.Column(
-                        JdbcSchema.Table.this.getName(),
-                        name);
+                        new MondrianDef.Column(
+                                JdbcSchema.Table.this.getName(),
+                                name);
                 this.usages = new ArrayList<JdbcSchema.Table.Column.Usage>();
             }
 
@@ -633,9 +652,8 @@ public class JdbcSchema {
                     private Usage nextUsage;
 
                     ColumnTypeIterator(
-                        final List<Usage> usages,
-                        final UsageType columnType)
-                    {
+                            final List<Usage> usages,
+                            final UsageType columnType) {
                         this.usageIter = usages.iterator();
                         this.usageType = columnType;
                     }
@@ -693,35 +711,35 @@ public class JdbcSchema {
                 pw.print(getColumnSize());
 
                 switch (getType()) {
-                case Types.TINYINT:
-                case Types.SMALLINT:
-                case Types.INTEGER:
-                case Types.BIGINT:
-                case Types.FLOAT:
-                case Types.REAL:
-                case Types.DOUBLE:
-                    break;
-                case Types.NUMERIC:
-                case Types.DECIMAL:
-                    pw.print(", decimalDigits=");
-                    pw.print(getDecimalDigits());
-                    pw.print(", numPrecRadix=");
-                    pw.print(getNumPrecRadix());
-                    break;
-                case Types.CHAR:
-                case Types.VARCHAR:
-                    pw.print(", charOctetLength=");
-                    pw.print(getCharOctetLength());
-                    break;
-                case Types.LONGVARCHAR:
-                case Types.DATE:
-                case Types.TIME:
-                case Types.TIMESTAMP:
-                case Types.BINARY:
-                case Types.VARBINARY:
-                case Types.LONGVARBINARY:
-                default:
-                    break;
+                    case Types.TINYINT:
+                    case Types.SMALLINT:
+                    case Types.INTEGER:
+                    case Types.BIGINT:
+                    case Types.FLOAT:
+                    case Types.REAL:
+                    case Types.DOUBLE:
+                        break;
+                    case Types.NUMERIC:
+                    case Types.DECIMAL:
+                        pw.print(", decimalDigits=");
+                        pw.print(getDecimalDigits());
+                        pw.print(", numPrecRadix=");
+                        pw.print(getNumPrecRadix());
+                        break;
+                    case Types.CHAR:
+                    case Types.VARCHAR:
+                        pw.print(", charOctetLength=");
+                        pw.print(getCharOctetLength());
+                        break;
+                    case Types.LONGVARCHAR:
+                    case Types.DATE:
+                    case Types.TIME:
+                    case Types.TIMESTAMP:
+                    case Types.BINARY:
+                    case Types.VARBINARY:
+                    case Types.LONGVARBINARY:
+                    default:
+                        break;
                 }
                 pw.print(", isNullable=");
                 pw.print(isNullable());
@@ -738,13 +756,19 @@ public class JdbcSchema {
             }
         }
 
-        /** Name of table. */
+        /**
+         * Name of table.
+         */
         private final String name;
 
-        /** Map from column name to column. */
+        /**
+         * Map from column name to column.
+         */
         private Map<String, Column> columnMap;
 
-        /** Sum of all of the table's column's column sizes. */
+        /**
+         * Sum of all of the table's column's column sizes.
+         */
         private int totalColumnSize;
 
         /**
@@ -817,11 +841,9 @@ public class JdbcSchema {
          * Returns an iterator over all column usages of a given type.
          */
         public Iterator<JdbcSchema.Table.Column.Usage> getColumnUsages(
-            final UsageType usageType)
-        {
+                final UsageType usageType) {
             class CTIterator
-                implements Iterator<JdbcSchema.Table.Column.Usage>
-            {
+                    implements Iterator<JdbcSchema.Table.Column.Usage> {
                 private final Iterator<Column> columnIter;
                 private final UsageType columnType;
                 private Iterator<JdbcSchema.Table.Column.Usage> usageIter;
@@ -834,8 +856,8 @@ public class JdbcSchema {
 
                 public boolean hasNext() {
                     while (true) {
-                        while ((usageIter == null) || ! usageIter.hasNext()) {
-                            if (! columnIter.hasNext()) {
+                        while ((usageIter == null) || !usageIter.hasNext()) {
+                            if (!columnIter.hasNext()) {
                                 nextObject = null;
                                 return false;
                             }
@@ -849,9 +871,11 @@ public class JdbcSchema {
                         }
                     }
                 }
+
                 public JdbcSchema.Table.Column.Usage next() {
                     return nextObject;
                 }
+
                 public void remove() {
                     usageIter.remove();
                 }
@@ -882,12 +906,11 @@ public class JdbcSchema {
             // if usageIter has already been set, then usageIter can NOT be
             // reset
             if ((this.tableUsageType != TableUsageType.UNKNOWN)
-                && (this.tableUsageType != tableUsageType))
-            {
+                    && (this.tableUsageType != tableUsageType)) {
                 throw mres.AttemptToChangeTableUsage.ex(
-                    getName(),
-                    this.tableUsageType.name(),
-                    tableUsageType.name());
+                        getName(),
+                        this.tableUsageType.name(),
+                        tableUsageType.name());
             }
             this.tableUsageType = tableUsageType;
         }
@@ -913,6 +936,7 @@ public class JdbcSchema {
             pw.flush();
             return sw.toString();
         }
+
         public void print(final PrintWriter pw, final String prefix) {
             pw.print(prefix);
             pw.println("Table:");
@@ -963,10 +987,10 @@ public class JdbcSchema {
                     try {
                         Map<String, Column> map = getColumnMap();
                         rs = dmd.getColumns(
-                            catalog,
-                            schema,
-                            tableName,
-                            columnNamePattern);
+                                catalog,
+                                schema,
+                                tableName,
+                                columnNamePattern);
                         while (rs.next()) {
                             String name = rs.getString(4);
                             int type = rs.getInt(5);
@@ -1024,7 +1048,7 @@ public class JdbcSchema {
      * is in deterministic order.
      */
     private final SortedMap<String, Table> tables =
-        new TreeMap<String, Table>();
+            new TreeMap<String, Table>();
 
     public JdbcSchema(final DataSource dataSource) {
         assert dataSource != null;
@@ -1150,20 +1174,19 @@ public class JdbcSchema {
             final DatabaseMetaData databaseMetaData = conn.getMetaData();
             List<String> tableTypes = Arrays.asList("TABLE", "VIEW");
             if (databaseMetaData.getDatabaseProductName().toUpperCase().indexOf(
-                    "VERTICA") >= 0)
-            {
+                    "VERTICA") >= 0) {
                 for (String tableType : tableTypes) {
                     loadTablesOfType(
-                        databaseMetaData,
-                        Collections.singletonList(tableType),
-                        tableName);
+                            databaseMetaData,
+                            Collections.singletonList(tableType),
+                            tableName);
                 }
             } else {
                 loadTablesOfType(databaseMetaData, tableTypes, tableName);
             }
         } catch (SQLException e) {
             throw Util.newError(
-                e, "Error while loading JDBC schema");
+                    e, "Error while loading JDBC schema");
         } finally {
             if (conn != null) {
                 try {
@@ -1182,8 +1205,7 @@ public class JdbcSchema {
      * @throws SQLException on error
      */
     public Table reloadTable(String tableName)
-        throws SQLException
-    {
+            throws SQLException {
         loadTables(tableName);
         return tables.get(tableName);
     }
@@ -1193,20 +1215,19 @@ public class JdbcSchema {
      * etc.)
      */
     private void loadTablesOfType(
-        DatabaseMetaData databaseMetaData,
-        List<String> tableTypes,
-        String tableName)
-        throws SQLException
-    {
+            DatabaseMetaData databaseMetaData,
+            List<String> tableTypes,
+            String tableName)
+            throws SQLException {
         final String schema = getSchemaName();
         final String catalog = getCatalogName();
         ResultSet rs = null;
         try {
             rs = databaseMetaData.getTables(
-                catalog,
-                schema,
-                tableName,
-                tableTypes.toArray(new String[tableTypes.size()]));
+                    catalog,
+                    schema,
+                    tableName,
+                    tableTypes.toArray(new String[tableTypes.size()]));
             if (rs == null) {
                 getLogger().debug("ERROR: rs == null");
                 return;
@@ -1229,9 +1250,8 @@ public class JdbcSchema {
      * @throws SQLException on error
      */
     protected synchronized void addTable(
-        final ResultSet rs)
-        throws SQLException
-    {
+            final ResultSet rs)
+            throws SQLException {
         String name = rs.getString(3);
         String tableType = rs.getString(4);
         Table table = new Table(name, tableType);
