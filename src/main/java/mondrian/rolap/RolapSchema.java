@@ -1897,6 +1897,16 @@ public class RolapSchema extends OlapElementBase implements Schema {
                 PhysTable table,
                 RolapConnection connection);
         }
+
+        private Map<String, String> joinInfoMap = new HashMap<String, String>();
+
+        public void addJoinInfo(String joinCondition, String joinType){
+            this.joinInfoMap.put(joinCondition, joinType);
+        }
+
+        public Map getJoinInfoMap(){
+            return joinInfoMap;
+        }
     }
 
     /**

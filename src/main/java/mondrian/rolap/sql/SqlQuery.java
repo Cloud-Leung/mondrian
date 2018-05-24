@@ -99,6 +99,10 @@ public class SqlQuery {
 
     private int joinCount;
 
+    private Map<String, String> joinInfoMap = null;
+
+    private String joinType = new String();
+
     /** The SQL dialect this query is to be generated in. */
     private final Dialect dialect;
 
@@ -374,6 +378,9 @@ public class SqlQuery {
                 (alias == null)
                 ? table.getAlias()
                 : alias;
+            joinInfoMap = ((RolapSchema.PhysTable) relation).getJoinInfoMap();
+            if(joinInfoMap.containsKey(joinCondition))
+                joinType = joinInfoMap.get(joinCondition);
             return addFromTable(
                 table.getSchemaName(),
                 table.getName(),
@@ -580,7 +587,7 @@ public class SqlQuery {
         final String first = distinct ? "select distinct " : "select ";
         select.toBuffer(buf, generateFormattedSql, prefix, first, ", ", "", "");
         groupingFunctionsToBuffer(buf, prefix);
-        String fromSep = joinCount > 0 ? " join " : ", ";
+        String fromSep = joinCount > 0 ? " " + joinType + " join " : ", ";
         if (dialect.allowsJoinOn() && from.size() > 1) {
             if (joinCount <= 0) {
                 throw new AssertionError();
