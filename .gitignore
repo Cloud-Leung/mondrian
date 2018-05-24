@@ -27,3 +27,4 @@ lib/mondrian.dtd
 lib/mondrian3.dtd
 mondrian.properties.template
 
+*.bak

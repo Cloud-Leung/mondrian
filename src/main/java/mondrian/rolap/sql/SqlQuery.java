@@ -101,8 +101,6 @@ public class SqlQuery {
 
     private Map<String, String> joinInfoMap = null;
 
-    private String joinType = new String();
-
     /** The SQL dialect this query is to be generated in. */
     private final Dialect dialect;
 
@@ -379,8 +377,6 @@ public class SqlQuery {
                 ? table.getAlias()
                 : alias;
             joinInfoMap = ((RolapSchema.PhysTable) relation).getJoinInfoMap();
-            if(joinInfoMap.containsKey(joinCondition))
-                joinType = joinInfoMap.get(joinCondition);
             return addFromTable(
                 table.getSchemaName(),
                 table.getName(),
@@ -587,14 +583,16 @@ public class SqlQuery {
         final String first = distinct ? "select distinct " : "select ";
         select.toBuffer(buf, generateFormattedSql, prefix, first, ", ", "", "");
         groupingFunctionsToBuffer(buf, prefix);
-        String fromSep = joinCount > 0 ? " " + joinType + " join " : ", ";
+        String fromSep = joinCount > 0 ? " " : ", ";
         if (dialect.allowsJoinOn() && from.size() > 1) {
             if (joinCount <= 0) {
                 throw new AssertionError();
             }
         }
+//        from.toBuffer(
+//                buf, generateFormattedSql, prefix, " from ", fromSep, "", "");
         from.toBuffer(
-            buf, generateFormattedSql, prefix, " from ", fromSep, "", "");
+                buf, generateFormattedSql, prefix, " from ", fromSep, "", "", joinInfoMap);
         where.toBuffer(
             buf, generateFormattedSql, prefix, " where ", " and ", "", "");
         if (groupingSets.isEmpty()) {
@@ -796,7 +794,7 @@ public class SqlQuery {
          *
          * @param element Element to add
          * @return whether element was added, per
-         * {@link java.util.Collection#add(Object)}
+         * {@link Collection#add(Object)}
          */
         public boolean add(final String element) {
             if (allowDups || !contains(element)) {
@@ -823,6 +821,25 @@ public class SqlQuery {
             toBuffer(buf, first, sep, last);
         }
 
+        final void toBuffer(
+                StringBuilder buf,
+                boolean generateFormattedSql,
+                String prefix,
+                String first,
+                String sep,
+                String last,
+                String empty,
+                Map<String, String> joinInfoMap)
+        {
+            if (isEmpty()) {
+                buf.append(empty);
+                return;
+            }
+            first = foo(generateFormattedSql, prefix, first);
+            sep = foo(generateFormattedSql, prefix, sep);
+            toBuffer(buf, first, sep, last, joinInfoMap);
+        }
+
         static String foo(
             boolean generateFormattedSql,
             String prefix,
@@ -844,6 +861,35 @@ public class SqlQuery {
                 }
             }
             return s;
+        }
+
+        final void toBuffer(
+                final StringBuilder buf,
+                final String first,
+                final String sep,
+                final String last,
+                final Map<String, String> joinInfoMap)
+        {
+            int n = 0;
+            buf.append(first);
+            for (String s : this) {
+                if (n++ > 0) {
+                    buf.append(sep);
+                }
+                buf.append(getJoinType(s, joinInfoMap)).append(s);
+            }
+            buf.append(last);
+        }
+
+        static String getJoinType(String fromCondition, Map<String, String> joinInfoMap){
+            String type = "";
+            for(String key : joinInfoMap.keySet()){
+                if(fromCondition.indexOf(key) != -1){
+                    type = joinInfoMap.get(key) + " join ";
+                    break;
+                }
+            }
+            return type;
         }
 
         final void toBuffer(

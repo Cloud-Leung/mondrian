@@ -1,6 +1,6 @@
-diff -Naur src/main/java/mondrian/rolap/sql/SqlQuery.java /home/weiy/project/mondrian-4.4/src/main/java/mondrian/rolap/sql/SqlQuery.java
---- src/main/java/mondrian/rolap/sql/SqlQuery.java	2016-11-25 10:03:55.000000000 +0800
-+++ /home/weiy/project/mondrian-4.4/src/main/java/mondrian/rolap/sql/SqlQuery.java	2017-01-10 16:29:37.221645480 +0800
+diff -Naur src/main/java/mondrian/rolap/sql/SqlQuery.java mondrian/src/main/java/mondrian/rolap/sql/SqlQuery.java
+--- mondrian/src/main/java/mondrian/rolap/sql/SqlQuery.java	2016-11-25 10:03:55.000000000 +0800
++++ mondrian/src/main/java/mondrian/rolap/sql/SqlQuery.java	2017-01-10 16:29:37.221645480 +0800
 @@ -101,8 +101,6 @@
  
      private Map<String, String> joinInfoMap = null;
